@@ -1,20 +1,23 @@
 package io.github.nhwalker.unixsocket;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.net.URL;
 import java.net.URLClassLoader;
+import java.util.ServiceLoader;
 import org.junit.jupiter.api.Test;
 
 class UnixSocketProviderTest {
 
   @Test
   void providerDiscoversServiceLoaderRegistration() {
-    assertInstanceOf(FakeProvider.class, UnixSocketProvider.provider());
+    var types = ServiceLoader.load(UnixSocketProvider.class).stream()
+        .map(ServiceLoader.Provider::type)
+        .toList();
+    assertTrue(types.contains(FakeProvider.class));
   }
 
   @Test
