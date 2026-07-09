@@ -58,10 +58,27 @@ public interface UnixSocketProvider {
 
   /**
    * Wraps a raw file descriptor — for example one parsed from an environment variable, or
-   * created by the caller's own FFM code ({@code memfd_create(2)}, ...) — as an owning
-   * {@link Fd} handle, taking ownership.
+   * created by the caller's own FFM code — as an owning {@link Fd} handle, taking ownership.
    */
   Fd adoptFd(int rawFd);
+
+  /**
+   * Creates an anonymous shared-memory descriptor of the given size ({@code memfd_create(2)} or
+   * equivalent, sized with {@code ftruncate(2)}), ready to {@link Fd#map map} and to pass to a
+   * peer — how a Wayland client backs a {@code wl_shm} pool.
+   *
+   * @param size the initial size in bytes; must be positive
+   * @throws IllegalArgumentException if {@code size} is not positive
+   * @throws IOException on creation failure ({@code ENOMEM}, {@code EMFILE}, ...)
+   */
+  Fd sharedMemory(long size) throws IOException;
+
+  /**
+   * Creates a unidirectional pipe via {@code pipe2(2)} — how clipboard and drag-and-drop
+   * transfers work: pass one end to the peer, stream on the other with {@link Fd#read} /
+   * {@link Fd#write}.
+   */
+  Pipe pipe() throws IOException;
 
   /** Two connected channels, as created by {@link #pair()}. Closing the pair closes both ends. */
   interface Pair extends AutoCloseable {
@@ -79,6 +96,26 @@ public interface UnixSocketProvider {
         first().close();
       } finally {
         second().close();
+      }
+    }
+  }
+
+  /** The two ends of a pipe, as created by {@link #pipe()}. Closing the pipe closes both. */
+  interface Pipe extends AutoCloseable {
+
+    /** The end data is read from. */
+    Fd readEnd();
+
+    /** The end data is written to. */
+    Fd writeEnd();
+
+    /** Closes both ends; the write end is closed even if closing the read end fails. */
+    @Override
+    default void close() {
+      try {
+        readEnd().close();
+      } finally {
+        writeEnd().close();
       }
     }
   }

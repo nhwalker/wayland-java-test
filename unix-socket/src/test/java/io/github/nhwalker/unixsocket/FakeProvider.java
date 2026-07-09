@@ -24,4 +24,14 @@ public final class FakeProvider implements UnixSocketProvider {
   public Fd adoptFd(int rawFd) {
     throw new UnsupportedOperationException();
   }
+
+  @Override
+  public Fd sharedMemory(long size) {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public Pipe pipe() {
+    throw new UnsupportedOperationException();
+  }
 }

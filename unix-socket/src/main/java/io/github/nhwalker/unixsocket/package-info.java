@@ -20,6 +20,10 @@
  *       {@code FD_CLOEXEC} set. This is a guarantee, not an option.
  *   <li><b>Buffers.</b> {@link java.lang.foreign.MemorySegment} is the primitive data carrier;
  *       {@link java.nio.ByteBuffer} overloads are provided as conveniences.
+ *   <li><b>Descriptor I/O.</b> {@link io.github.nhwalker.unixsocket.Fd} carries the operations
+ *       the JDK does not expose for raw descriptors — memory-mapping, blocking stream
+ *       reads/writes, and sizing — and the provider can create the descriptors passed in
+ *       practice (anonymous shared memory and pipes).
  * </ul>
  */
 package io.github.nhwalker.unixsocket;

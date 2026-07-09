@@ -29,7 +29,7 @@ class UnixSocketChannelDefaultsTest {
   @Test
   void byteBufferSendForwardsFds() throws IOException {
     var channel = new FakeUnixSocketChannel();
-    List<Fd> fds = List.of(new ClosableFd());
+    List<Fd> fds = List.of(new FakeFd());
 
     channel.send(ByteBuffer.wrap(new byte[] {42}), fds);
 
@@ -73,37 +73,5 @@ class UnixSocketChannelDefaultsTest {
 
     assertArrayEquals(new byte[] {7, 8}, channel.sentBytes);
     assertSame(List.of(), channel.sentFds);
-  }
-
-  /** Minimal Fd for identity assertions. */
-  private static final class ClosableFd implements Fd {
-    private boolean open = true;
-
-    @Override
-    public int value() {
-      if (!open) {
-        throw new IllegalStateException("closed");
-      }
-      return 99;
-    }
-
-    @Override
-    public boolean isOpen() {
-      return open;
-    }
-
-    @Override
-    public int detach() {
-      if (!open) {
-        throw new IllegalStateException("closed");
-      }
-      open = false;
-      return 99;
-    }
-
-    @Override
-    public void close() {
-      open = false;
-    }
   }
 }
