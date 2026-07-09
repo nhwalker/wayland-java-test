@@ -3,6 +3,7 @@ package io.github.nhwalker.unixsocket.internal;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
@@ -12,7 +13,6 @@ import io.github.nhwalker.unixsocket.ReceiveResult;
 import io.github.nhwalker.unixsocket.UnixSocketChannel;
 import io.github.nhwalker.unixsocket.UnixSocketProvider;
 import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.lang.foreign.Arena;
 import java.lang.foreign.FunctionDescriptor;
 import java.lang.foreign.Linker;
@@ -27,6 +27,7 @@ import java.nio.channels.SocketChannel;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.ServiceLoader;
+import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.io.TempDir;
@@ -46,16 +47,23 @@ class FfmProviderTest {
     assumeTrue(socketPath.toString().getBytes(StandardCharsets.UTF_8).length <= 107,
         "temp dir path too long for sun_path");
     byte[] payload = "ping".getBytes(StandardCharsets.UTF_8);
+    AtomicReference<Throwable> echoError = new AtomicReference<>();
     try (ServerSocketChannel server = ServerSocketChannel.open(StandardProtocolFamily.UNIX)) {
       server.bind(UnixDomainSocketAddress.of(socketPath));
-      Thread echo = Thread.ofPlatform().start(() -> {
+      Thread echo = Thread.ofPlatform().daemon().start(() -> {
         try (SocketChannel client = server.accept()) {
           ByteBuffer buffer = ByteBuffer.allocate(64);
           client.read(buffer);
           buffer.flip();
           client.write(buffer);
-        } catch (IOException e) {
-          throw new UncheckedIOException(e);
+        } catch (Throwable t) {
+          echoError.set(t);
+          // Tear the listener down so a client blocked in receive unblocks instead of hanging.
+          try {
+            server.close();
+          } catch (IOException ignored) {
+            // best-effort unblock
+          }
         }
       });
       try (UnixSocketChannel channel = provider.connect(socketPath);
@@ -67,7 +75,9 @@ class FfmProviderTest {
         assertArrayEquals(payload,
             dst.asSlice(0, payload.length).toArray(ValueLayout.JAVA_BYTE));
       }
-      echo.join();
+      echo.join(5_000);
+      assertFalse(echo.isAlive());
+      assertNull(echoError.get());
     }
   }
 

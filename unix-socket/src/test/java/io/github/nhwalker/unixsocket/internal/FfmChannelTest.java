@@ -4,13 +4,13 @@ import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.github.nhwalker.unixsocket.Fd;
 import io.github.nhwalker.unixsocket.ReceiveResult;
 import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.lang.foreign.Arena;
 import java.lang.foreign.MemorySegment;
 import java.lang.foreign.ValueLayout;
@@ -93,17 +93,13 @@ class FfmChannelTest {
     }
     try (var pair = provider.pair()) {
       byte[] got = new byte[size];
-      Thread reader = Thread.ofPlatform().start(() -> {
+      AtomicReference<Throwable> readerError = new AtomicReference<>();
+      Thread reader = Thread.ofPlatform().daemon().start(() -> {
         try (Arena arena = Arena.ofConfined()) {
           MemorySegment dst = arena.allocate(64 * 1024);
           int offset = 0;
           while (offset < size) {
-            ReceiveResult result;
-            try {
-              result = pair.second().receive(dst);
-            } catch (IOException e) {
-              throw new UncheckedIOException(e);
-            }
+            ReceiveResult result = pair.second().receive(dst);
             if (result.endOfStream()) {
               break;
             }
@@ -111,11 +107,29 @@ class FfmChannelTest {
                 result.bytesReceived());
             offset += result.bytesReceived();
           }
+        } catch (Throwable t) {
+          readerError.set(t);
+          // Unblock the sender rather than leaving it stuck in sendmsg forever.
+          closeQuietly(pair);
         }
       });
       pair.first().send(MemorySegment.ofArray(payload));
-      reader.join();
+      reader.join(5_000);
+      if (reader.isAlive()) {
+        closeQuietly(pair); // unblock the reader before failing
+        reader.join(1_000);
+      }
+      assertNull(readerError.get());
+      assertFalse(reader.isAlive());
       assertArrayEquals(payload, got);
+    }
+  }
+
+  private static void closeQuietly(AutoCloseable closeable) {
+    try {
+      closeable.close();
+    } catch (Exception ignored) {
+      // best-effort unblock
     }
   }
 
@@ -149,7 +163,7 @@ class FfmChannelTest {
     var pair = provider.pair();
     AtomicReference<Throwable> thrown = new AtomicReference<>();
     CountDownLatch entered = new CountDownLatch(1);
-    Thread blocked = Thread.ofPlatform().start(() -> {
+    Thread blocked = Thread.ofPlatform().daemon().start(() -> {
       try (Arena arena = Arena.ofConfined()) {
         entered.countDown();
         pair.first().receive(arena.allocate(8));
@@ -160,7 +174,12 @@ class FfmChannelTest {
     entered.await();
     Thread.sleep(100); // let the thread actually block in recvmsg
     pair.first().close();
-    blocked.join(5000);
+    blocked.join(5_000);
+    if (blocked.isAlive()) {
+      // Peer hangup also wakes a blocked recvmsg; free the thread before failing.
+      pair.second().close();
+      blocked.join(1_000);
+    }
     assertFalse(blocked.isAlive());
     assertInstanceOf(IOException.class, thrown.get());
     pair.second().close();

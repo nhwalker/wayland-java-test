@@ -11,6 +11,9 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+    # Backstop above the Gradle test-task timeout, which should always fire first
+    # and turn a hang into a normal failure with test reports uploaded
+    timeout-minutes: 30
     steps:
       - name: Checkout
         uses: actions/checkout@v4
