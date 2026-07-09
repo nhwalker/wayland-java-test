@@ -1,7 +1,10 @@
 package io.github.nhwalker.unixsocket;
 
 import java.io.IOException;
+import java.lang.foreign.Arena;
+import java.lang.foreign.MemorySegment;
 import java.net.UnixDomainSocketAddress;
+import java.nio.ByteBuffer;
 import java.nio.file.Path;
 import java.util.ServiceLoader;
 
@@ -72,6 +75,56 @@ public interface UnixSocketProvider {
    * @throws IOException on creation failure ({@code ENOMEM}, {@code EMFILE}, ...)
    */
   Fd sharedMemory(long size) throws IOException;
+
+  /**
+   * Creates a shared-memory descriptor pre-filled with a copy of {@code content}: sized to
+   * {@code content.byteSize()}, mapped, copied, and unmapped in one call — the common
+   * "send these bytes via a file descriptor" case without the map/copy boilerplate.
+   *
+   * <p>The copy is eager: later changes to {@code content} do not affect the descriptor, and
+   * errors surface here rather than at send time. On failure the descriptor is closed before
+   * the exception propagates, so nothing leaks.
+   *
+   * @param content the bytes to copy in; must not be empty
+   * @throws IllegalArgumentException if {@code content} is empty
+   * @throws IOException on creation or mapping failure
+   */
+  default Fd sharedMemory(MemorySegment content) throws IOException {
+    Fd fd = sharedMemory(content.byteSize());
+    try (Arena arena = Arena.ofConfined()) {
+      fd.map(Fd.MapMode.READ_WRITE, 0, content.byteSize(), arena).copyFrom(content);
+      return fd;
+    } catch (Throwable t) {
+      fd.close();
+      throw t;
+    }
+  }
+
+  /** Heap-array convenience for {@link #sharedMemory(MemorySegment)}. */
+  default Fd sharedMemory(byte[] content) throws IOException {
+    return sharedMemory(MemorySegment.ofArray(content));
+  }
+
+  /**
+   * Packed-pixel convenience for {@link #sharedMemory(MemorySegment)}: copies
+   * {@code content.length * 4} bytes in native byte order — on little-endian platforms this
+   * makes an ARGB pixel array (for example a {@code BufferedImage.TYPE_INT_ARGB_PRE} data
+   * buffer) byte-for-byte compatible with {@code wl_shm} {@code ARGB8888}.
+   */
+  default Fd sharedMemory(int[] content) throws IOException {
+    return sharedMemory(MemorySegment.ofArray(content));
+  }
+
+  /**
+   * {@link ByteBuffer} convenience for {@link #sharedMemory(MemorySegment)}: copies the
+   * buffer's remaining bytes (position to limit) and advances the position to the limit on
+   * success. The buffer must not be a read-only heap buffer.
+   */
+  default Fd sharedMemory(ByteBuffer content) throws IOException {
+    Fd fd = sharedMemory(MemorySegment.ofBuffer(content));
+    content.position(content.limit());
+    return fd;
+  }
 
   /**
    * Creates a unidirectional pipe via {@code pipe2(2)} — how clipboard and drag-and-drop
