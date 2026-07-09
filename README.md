@@ -26,11 +26,11 @@ The build is organized as a multi-project Gradle build:
 
 | Module | Description |
 | --- | --- |
-| `uds-api` | Unix domain socket send/receive API with ancillary-data support |
+| `unix-socket` | Unix domain socket send/receive API with ancillary-data support |
 | `wayland-scanner` | Code generator (annotation processor + CLI) for Wayland protocol XML |
 | `wayland-core` | The core library: wire protocol, event loop, and runtime |
 
-### `uds-api`
+### `unix-socket`
 
 An FFM-based Unix domain socket API supporting `sendmsg(2)`/`recvmsg(2)` with
 ancillary data — in particular `SCM_RIGHTS`, which the Wayland protocol relies on to
@@ -59,7 +59,7 @@ for the interfaces, requests, events, and enums they declare. It is usable two w
 ### `wayland-core`
 
 The core runtime that ties everything together: connection management over
-`uds-api`, wire-format marshalling/unmarshalling, object/proxy lifecycle, and event
+`unix-socket`, wire-format marshalling/unmarshalling, object/proxy lifecycle, and event
 dispatch for the stubs produced by `wayland-scanner`.
 
 ## Requirements

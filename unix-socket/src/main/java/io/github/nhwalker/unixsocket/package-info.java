@@ -5,4 +5,4 @@
  * {@code recvmsg(2)} with {@code SCM_RIGHTS}, enabling file-descriptor passing that the
  * JDK's built-in Unix domain socket channels do not support.
  */
-package io.github.nhwalker.wayland.uds;
+package io.github.nhwalker.unixsocket;

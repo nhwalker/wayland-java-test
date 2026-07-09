@@ -2,4 +2,7 @@ plugins {
     id 'wayland.java-conventions'
 }
 
+// Standalone module, independent of Wayland — kept out of the .wayland namespace
+group = 'io.github.nhwalker'
+
 description = 'Unix domain socket send/receive API with ancillary-data (SCM_RIGHTS) support, built on FFM'
