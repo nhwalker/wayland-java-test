@@ -1,0 +1,10 @@
+plugins {
+    // Auto-provisions the JDK required by the toolchain (Java 25) if not installed
+    id 'org.gradle.toolchains.foojay-resolver-convention' version '1.0.0'
+}
+
+rootProject.name = 'wayland-java-test'
+
+include 'uds-api'
+include 'wayland-scanner'
+include 'wayland-core'

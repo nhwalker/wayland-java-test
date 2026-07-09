@@ -1,0 +1,5 @@
+plugins {
+    id 'wayland.java-conventions'
+}
+
+description = 'Code generator (annotation processor + CLI) for Wayland protocol XML'
