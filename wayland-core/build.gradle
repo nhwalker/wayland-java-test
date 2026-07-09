@@ -5,5 +5,5 @@ plugins {
 description = 'Core Wayland library: wire protocol, object lifecycle, and event dispatch'
 
 dependencies {
-    api project(':uds-api')
+    api project(':unix-socket')
 }

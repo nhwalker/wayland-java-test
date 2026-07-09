@@ -5,6 +5,6 @@ plugins {
 
 rootProject.name = 'wayland-java-test'
 
-include 'uds-api'
+include 'unix-socket'
 include 'wayland-scanner'
 include 'wayland-core'

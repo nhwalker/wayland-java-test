@@ -21,10 +21,19 @@ dependencies {
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
+tasks.withType(Javadoc).configureEach {
+    // Docs favor prose contracts over exhaustive @param/@return tags
+    options.addStringOption('Xdoclint:all,-missing', '-quiet')
+}
+
 tasks.named('test') {
     useJUnitPlatform()
+    // Kill the worker process if tests wedge: interrupt-immune native calls defeat
+    // JUnit-level timeouts, and a hung worker otherwise stalls CI until cancelled
+    timeout = java.time.Duration.ofMinutes(10)
     testLogging {
-        events 'failed', 'skipped'
+        // 'passed' included so CI logs show which test was last running if a hang recurs
+        events 'passed', 'failed', 'skipped'
         exceptionFormat = 'full'
     }
 }

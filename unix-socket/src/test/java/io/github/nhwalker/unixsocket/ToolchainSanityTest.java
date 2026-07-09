@@ -1,4 +1,4 @@
-package io.github.nhwalker.wayland.uds;
+package io.github.nhwalker.unixsocket;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
