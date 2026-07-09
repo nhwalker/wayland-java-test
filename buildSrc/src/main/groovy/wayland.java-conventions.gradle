@@ -21,6 +21,11 @@ dependencies {
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
+tasks.withType(Javadoc).configureEach {
+    // Docs favor prose contracts over exhaustive @param/@return tags
+    options.addStringOption('Xdoclint:all,-missing', '-quiet')
+}
+
 tasks.named('test') {
     useJUnitPlatform()
     testLogging {
