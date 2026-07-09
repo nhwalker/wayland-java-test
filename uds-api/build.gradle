@@ -1,0 +1,5 @@
+plugins {
+    id 'wayland.java-conventions'
+}
+
+description = 'Unix domain socket send/receive API with ancillary-data (SCM_RIGHTS) support, built on FFM'

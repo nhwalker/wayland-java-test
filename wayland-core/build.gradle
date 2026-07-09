@@ -1,0 +1,9 @@
+plugins {
+    id 'wayland.java-conventions'
+}
+
+description = 'Core Wayland library: wire protocol, object lifecycle, and event dispatch'
+
+dependencies {
+    api project(':uds-api')
+}
