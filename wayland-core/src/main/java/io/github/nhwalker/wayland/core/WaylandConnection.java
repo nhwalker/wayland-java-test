@@ -1,6 +1,7 @@
 package io.github.nhwalker.wayland.core;
 
 import io.github.nhwalker.unixsocket.UnixSocketChannel;
+import io.github.nhwalker.unixsocket.UnixSocketProvider;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Optional;
@@ -17,21 +18,39 @@ import java.util.function.BooleanSupplier;
 public interface WaylandConnection extends AutoCloseable {
 
   /**
-   * Connects using the standard environment resolution: {@code WAYLAND_SOCKET} (inherited fd),
-   * else {@code WAYLAND_DISPLAY} under {@code XDG_RUNTIME_DIR}.
+   * Connects using the standard environment resolution: {@code WAYLAND_SOCKET} (an inherited,
+   * already-connected fd number), else {@code WAYLAND_DISPLAY} (absolute, or relative to
+   * {@code XDG_RUNTIME_DIR}), defaulting to {@code wayland-0}.
    */
   static WaylandConnection open() throws IOException {
-    throw new UnsupportedOperationException("wire engine not yet implemented");
+    UnixSocketProvider provider = UnixSocketProvider.provider();
+    String inheritedFd = System.getenv("WAYLAND_SOCKET");
+    if (inheritedFd != null) {
+      return adopt(provider.adopt(provider.adoptFd(Integer.parseInt(inheritedFd))));
+    }
+    String display = System.getenv("WAYLAND_DISPLAY");
+    if (display == null) {
+      display = "wayland-0";
+    }
+    Path path = Path.of(display);
+    if (!path.isAbsolute()) {
+      String runtimeDir = System.getenv("XDG_RUNTIME_DIR");
+      if (runtimeDir == null) {
+        throw new IOException("XDG_RUNTIME_DIR is not set and WAYLAND_DISPLAY is not absolute");
+      }
+      path = Path.of(runtimeDir, display);
+    }
+    return open(path);
   }
 
   /** Connects to an explicit socket path. */
   static WaylandConnection open(Path socket) throws IOException {
-    throw new UnsupportedOperationException("wire engine not yet implemented");
+    return adopt(UnixSocketProvider.provider().connect(socket));
   }
 
-  /** Wraps an already-connected compositor socket. */
+  /** Wraps an already-connected compositor socket, taking ownership of the channel. */
   static WaylandConnection adopt(UnixSocketChannel channel) {
-    throw new UnsupportedOperationException("wire engine not yet implemented");
+    return new WireConnection(channel);
   }
 
   /**
