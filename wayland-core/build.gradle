@@ -7,3 +7,8 @@ description = 'Core Wayland library: wire protocol, object lifecycle, and event 
 dependencies {
     api project(':unix-socket')
 }
+
+tasks.named('test') {
+    // Tests use real fds via unix-socket's FFM implementation
+    jvmArgs '--enable-native-access=ALL-UNNAMED'
+}
