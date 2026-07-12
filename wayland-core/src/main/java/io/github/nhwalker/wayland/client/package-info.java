@@ -1,9 +1,10 @@
 /**
- * Hand-written reference stubs for the core {@code wayland.xml} protocol — the specification
- * for the future {@code wayland-scanner} emitter, which will replace this package with
- * generated sources.
+ * The typed client surface for the core {@code wayland.xml} protocol. The classes in this
+ * package are <em>generated at build time</em> by {@code wayland-scanner} from its bundled
+ * protocol definition; only this file is hand-written. The emitted form is pinned by the
+ * scanner's golden-file conformance tests.
  *
- * <p>Generator conventions these stubs embody:
+ * <p>Generator conventions:
  *
  * <ul>
  *   <li>{@code wl_foo_bar} → {@code WlFooBar}; requests → camelCase methods; Java-keyword arg
