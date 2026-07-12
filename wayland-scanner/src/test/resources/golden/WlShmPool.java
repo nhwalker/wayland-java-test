@@ -17,7 +17,8 @@ public final class WlShmPool implements AutoCloseable {
           MessageDesc.of("create_buffer", 1, false,
               ArgDesc.newIdArg("id", () -> WlBuffer.INTERFACE),
               ArgDesc.intArg("offset"),
-              ArgDesc.intArg("width"), ArgDesc.intArg("height"),
+              ArgDesc.intArg("width"),
+              ArgDesc.intArg("height"),
               ArgDesc.intArg("stride"),
               ArgDesc.uintArg("format")),
           MessageDesc.of("destroy", 1, true),
@@ -50,11 +51,9 @@ public final class WlShmPool implements AutoCloseable {
   }
 
   /** Creates a buffer over {@code [offset, offset + height * stride)} of the pool. */
-  public WlBuffer createBuffer(int offset, int width, int height, int stride,
-      WlShm.Format format) {
-    return WlBuffer.TYPE.wrap(
-        proxy.marshalConstructor(0, WlBuffer.INTERFACE, offset, width, height, stride,
-            format.value()));
+  public WlBuffer createBuffer(int offset, int width, int height, int stride, WlShm.Format format) {
+    return WlBuffer.TYPE.wrap(proxy.marshalConstructor(0, WlBuffer.INTERFACE, offset, width, height,
+        stride, format.value()));
   }
 
   /** Destroys the pool; buffers created from it keep their storage alive. */

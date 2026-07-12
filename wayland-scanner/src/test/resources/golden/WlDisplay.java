@@ -83,7 +83,7 @@ public final class WlDisplay {
   private void control(int opcode, Object[] args) {
     Event event = decode(opcode, args);
     switch (event) {
-      case Event.Error e -> proxy.connection().fatalError(e.object(), e.code(), e.message());
+      case Event.Error e -> proxy.connection().fatalError(e.objectId(), e.code(), e.message());
       case Event.DeleteId d -> proxy.connection().retireId(d.id());
     }
     handler.accept(event);
@@ -106,7 +106,7 @@ public final class WlDisplay {
   public sealed interface Event permits Event.Error, Event.DeleteId {
 
     /** Fatal server error; {@code object} may be null if the id is no longer live. */
-    record Error(Proxy object, int code, String message) implements Event {}
+    record Error(Proxy objectId, int code, String message) implements Event {}
 
     /** The server confirmed an object id is dead and reusable. */
     record DeleteId(int id) implements Event {}

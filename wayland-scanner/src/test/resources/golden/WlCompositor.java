@@ -20,8 +20,7 @@ public final class WlCompositor {
               ArgDesc.newIdArg("id", () -> WlRegion.INTERFACE))),
       List.of());
 
-  public static final ProxyType<WlCompositor> TYPE =
-      ProxyType.of(INTERFACE, WlCompositor::new);
+  public static final ProxyType<WlCompositor> TYPE = ProxyType.of(INTERFACE, WlCompositor::new);
 
   private final Proxy proxy;
 

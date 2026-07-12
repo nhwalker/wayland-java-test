@@ -4,9 +4,30 @@ plugins {
 
 description = 'Core Wayland library: wire protocol, object lifecycle, and event dispatch'
 
+configurations {
+    waylandScanner
+}
+
 dependencies {
     api project(':unix-socket')
+    waylandScanner project(':wayland-scanner')
 }
+
+// The typed client surface is generated from the bundled wayland.xml on every build;
+// the wayland-scanner golden tests pin the emitted form.
+def generateWaylandStubs = tasks.register('generateWaylandStubs', JavaExec) {
+    def outputDir = layout.buildDirectory.dir('generated/sources/wayland/java')
+    classpath = configurations.waylandScanner
+    mainClass = 'io.github.nhwalker.wayland.scanner.Main'
+    javaLauncher = javaToolchains.launcherFor(java.toolchain)
+    args '--out', outputDir.get().asFile.absolutePath,
+         '--package', 'io.github.nhwalker.wayland.client',
+         '--builtin', 'wayland'
+    inputs.files(configurations.waylandScanner)
+    outputs.dir(outputDir)
+}
+
+sourceSets.main.java.srcDir(generateWaylandStubs)
 
 tasks.named('test') {
     // Tests use real fds via unix-socket's FFM implementation

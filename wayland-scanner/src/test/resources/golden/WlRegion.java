@@ -16,11 +16,15 @@ public final class WlRegion implements AutoCloseable {
       List.of(
           MessageDesc.of("destroy", 1, true),
           MessageDesc.of("add", 1, false,
-              ArgDesc.intArg("x"), ArgDesc.intArg("y"),
-              ArgDesc.intArg("width"), ArgDesc.intArg("height")),
+              ArgDesc.intArg("x"),
+              ArgDesc.intArg("y"),
+              ArgDesc.intArg("width"),
+              ArgDesc.intArg("height")),
           MessageDesc.of("subtract", 1, false,
-              ArgDesc.intArg("x"), ArgDesc.intArg("y"),
-              ArgDesc.intArg("width"), ArgDesc.intArg("height"))),
+              ArgDesc.intArg("x"),
+              ArgDesc.intArg("y"),
+              ArgDesc.intArg("width"),
+              ArgDesc.intArg("height"))),
       List.of());
 
   public static final ProxyType<WlRegion> TYPE = ProxyType.of(INTERFACE, WlRegion::new);

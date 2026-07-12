@@ -65,7 +65,7 @@ public final class WlRegistry {
     record GlobalRemove(int name) implements Event {}
   }
 
-  /** Installs the event handler for this registry, replacing any previous one. */
+  /** Installs the event handler for this object, replacing any previous one. */
   public void onEvent(Consumer<? super Event> handler) {
     proxy.setEventHandler((opcode, args) -> handler.accept(decode(opcode, args)));
   }

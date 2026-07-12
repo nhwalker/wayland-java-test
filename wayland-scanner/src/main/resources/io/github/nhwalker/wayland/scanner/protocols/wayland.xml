@@ -1,0 +1,364 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  The core Wayland protocol, restricted to the interfaces this project currently exercises.
+  Description bodies are this project's stub documentation (passed verbatim into javadoc).
+  The upstream definition is protocol/wayland.xml in the wayland repository.
+-->
+<protocol name="wayland">
+
+  <interface name="wl_display" version="1">
+    <description summary="core global object">
+      The connection's root object. Class documentation comes from the generator's
+      wl_display template, not this text.
+    </description>
+    <request name="sync">
+      <description summary="asynchronous roundtrip">
+        Requests a sync callback: its {@code done} fires once all prior requests are processed.
+      </description>
+      <arg name="callback" type="new_id" interface="wl_callback"/>
+    </request>
+    <request name="get_registry">
+      <arg name="registry" type="new_id" interface="wl_registry"/>
+    </request>
+    <event name="error">
+      <description summary="fatal error event">
+        Fatal server error; {@code object} may be null if the id is no longer live.
+      </description>
+      <arg name="object_id" type="object"/>
+      <arg name="code" type="uint"/>
+      <arg name="message" type="string"/>
+    </event>
+    <event name="delete_id">
+      <description summary="acknowledge object id deletion">
+        The server confirmed an object id is dead and reusable.
+      </description>
+      <arg name="id" type="uint"/>
+    </event>
+    <enum name="error">
+      <entry name="invalid_object" value="0"/>
+      <entry name="invalid_method" value="1"/>
+      <entry name="no_memory" value="2"/>
+      <entry name="implementation" value="3"/>
+    </enum>
+  </interface>
+
+  <interface name="wl_registry" version="1">
+    <description summary="global registry object">
+      The registry singleton: advertises and binds the compositor's globals.
+    </description>
+    <request name="bind">
+      <description summary="bind an object to the display">
+        Binds global {@code name} as {@code type} at {@code version}, returning the typed proxy.
+      </description>
+      <arg name="name" type="uint"/>
+      <arg name="id" type="new_id"/>
+    </request>
+    <event name="global">
+      <description summary="announce global object">
+        A global became available.
+      </description>
+      <arg name="name" type="uint"/>
+      <arg name="interface" type="string"/>
+      <arg name="version" type="uint"/>
+    </event>
+    <event name="global_remove">
+      <description summary="announce removal of global object">
+        A global was removed; requests to objects bound from it will be ignored.
+      </description>
+      <arg name="name" type="uint"/>
+    </event>
+  </interface>
+
+  <interface name="wl_callback" version="1">
+    <description summary="callback object">
+      A one-shot completion callback. The server destroys the object after firing {@code done};
+      the connection retires its id via {@code wl_display.delete_id} — no client action needed.
+    </description>
+    <event name="done">
+      <description summary="done event">
+        The callback fired.
+      </description>
+      <arg name="callback_data" type="uint"/>
+    </event>
+  </interface>
+
+  <interface name="wl_compositor" version="6">
+    <description summary="the compositor singleton">
+      The compositor global: creates surfaces and regions.
+    </description>
+    <request name="create_surface">
+      <arg name="id" type="new_id" interface="wl_surface"/>
+    </request>
+    <request name="create_region">
+      <arg name="id" type="new_id" interface="wl_region"/>
+    </request>
+  </interface>
+
+  <interface name="wl_shm" version="2">
+    <description summary="shared memory support">
+      The shared-memory global: creates pools from file descriptors.
+    </description>
+    <request name="create_pool">
+      <description summary="create a shm pool">
+        Creates a pool backed by {@code fd} (e.g. from
+        {@link io.github.nhwalker.unixsocket.UnixSocketProvider#sharedMemory(long)}). The caller
+        retains ownership of the handle; keep it open until
+        {@link io.github.nhwalker.wayland.core.WaylandConnection#flush()} has returned.
+      </description>
+      <arg name="id" type="new_id" interface="wl_shm_pool"/>
+      <arg name="fd" type="fd"/>
+      <arg name="size" type="int"/>
+    </request>
+    <request name="release" type="destructor" since="2"/>
+    <event name="format">
+      <description summary="pixel format description">
+        A pixel format the compositor supports. Raw enum int for forward compatibility; decode
+        via {@link WlShm.Format#lookup}.
+      </description>
+      <arg name="format" type="uint" enum="format"/>
+    </event>
+    <enum name="error">
+      <entry name="invalid_format" value="0"/>
+      <entry name="invalid_stride" value="1"/>
+      <entry name="invalid_fd" value="2"/>
+    </enum>
+    <enum name="format">
+      <description summary="pixel formats">
+        Buffer pixel formats. {@code ARGB8888}/{@code XRGB8888} are 0/1; all others are DRM fourcc
+        codes. A representative subset of wayland.xml's list — the generator emits the complete
+        set from the XML.
+      </description>
+      <entry name="argb8888" value="0"/>
+      <entry name="xrgb8888" value="1"/>
+      <entry name="c8" value="0x20203843"/>
+      <entry name="rgb565" value="0x36314752"/>
+      <entry name="rgb888" value="0x34324752"/>
+      <entry name="bgr888" value="0x34324742"/>
+      <entry name="xbgr8888" value="0x34324258"/>
+      <entry name="abgr8888" value="0x34324241"/>
+      <entry name="rgbx8888" value="0x34325852"/>
+      <entry name="rgba8888" value="0x34324152"/>
+      <entry name="bgrx8888" value="0x34325842"/>
+      <entry name="bgra8888" value="0x34324142"/>
+      <entry name="xrgb2101010" value="0x30335258"/>
+      <entry name="argb2101010" value="0x30335241"/>
+      <entry name="yuyv" value="0x56595559"/>
+      <entry name="nv12" value="0x3231564e"/>
+    </enum>
+  </interface>
+
+  <interface name="wl_shm_pool" version="1">
+    <description summary="a shared memory pool">
+      A shared-memory pool from which {@link WlBuffer}s are carved.
+    </description>
+    <request name="create_buffer">
+      <description summary="create a buffer from the pool">
+        Creates a buffer over {@code [offset, offset + height * stride)} of the pool.
+      </description>
+      <arg name="id" type="new_id" interface="wl_buffer"/>
+      <arg name="offset" type="int"/>
+      <arg name="width" type="int"/>
+      <arg name="height" type="int"/>
+      <arg name="stride" type="int"/>
+      <arg name="format" type="uint" enum="wl_shm.format"/>
+    </request>
+    <request name="destroy" type="destructor">
+      <description summary="destroy the pool">
+        Destroys the pool; buffers created from it keep their storage alive.
+      </description>
+    </request>
+    <request name="resize">
+      <description summary="change the size of the pool mapping">
+        Grows the pool (never shrinks) after the backing fd was ftruncated larger.
+      </description>
+      <arg name="size" type="int"/>
+    </request>
+  </interface>
+
+  <interface name="wl_buffer" version="1">
+    <description summary="content for a wl_surface">
+      Pixel content that can be attached to a {@link WlSurface}.
+    </description>
+    <request name="destroy" type="destructor">
+      <description summary="destroy a buffer">
+        Destroys the buffer. The underlying storage (e.g. shm pool memory) is unaffected.
+      </description>
+    </request>
+    <event name="release">
+      <description summary="compositor releases buffer">
+        The compositor no longer reads the buffer; the client may reuse its storage.
+      </description>
+    </event>
+  </interface>
+
+  <interface name="wl_surface" version="6">
+    <description summary="an onscreen surface">
+      An onscreen surface: content is supplied by attaching buffers and committing.
+    </description>
+    <request name="destroy" type="destructor"/>
+    <request name="attach">
+      <description summary="set the surface contents">
+        Attaches {@code buffer} as the pending content; {@code null} removes the content.
+      </description>
+      <arg name="buffer" type="object" interface="wl_buffer" allow-null="true"/>
+      <arg name="x" type="int"/>
+      <arg name="y" type="int"/>
+    </request>
+    <request name="damage">
+      <arg name="x" type="int"/>
+      <arg name="y" type="int"/>
+      <arg name="width" type="int"/>
+      <arg name="height" type="int"/>
+    </request>
+    <request name="frame">
+      <description summary="request a frame throttling hint">
+        Requests a frame-done callback for the next commit.
+      </description>
+      <arg name="callback" type="new_id" interface="wl_callback"/>
+    </request>
+    <request name="set_opaque_region">
+      <description summary="set opaque region">
+        {@code null} means the whole surface is non-opaque.
+      </description>
+      <arg name="region" type="object" interface="wl_region" allow-null="true"/>
+    </request>
+    <request name="set_input_region">
+      <description summary="set input region">
+        {@code null} means the whole surface accepts input.
+      </description>
+      <arg name="region" type="object" interface="wl_region" allow-null="true"/>
+    </request>
+    <request name="commit"/>
+    <request name="set_buffer_transform" since="2">
+      <arg name="transform" type="int" enum="wl_output.transform"/>
+    </request>
+    <request name="set_buffer_scale" since="3">
+      <arg name="scale" type="int"/>
+    </request>
+    <request name="damage_buffer" since="4">
+      <arg name="x" type="int"/>
+      <arg name="y" type="int"/>
+      <arg name="width" type="int"/>
+      <arg name="height" type="int"/>
+    </request>
+    <request name="offset" since="5">
+      <arg name="x" type="int"/>
+      <arg name="y" type="int"/>
+    </request>
+    <event name="enter">
+      <description summary="surface enters an output">
+        The surface now overlaps {@code output} (expected interface: wl_output).
+      </description>
+      <arg name="output" type="object" interface="wl_output"/>
+    </event>
+    <event name="leave">
+      <description summary="surface leaves an output">
+        The surface no longer overlaps {@code output} (expected interface: wl_output).
+      </description>
+      <arg name="output" type="object" interface="wl_output"/>
+    </event>
+    <event name="preferred_buffer_scale" since="6">
+      <arg name="factor" type="int"/>
+    </event>
+    <event name="preferred_buffer_transform" since="6">
+      <description summary="preferred buffer transform">
+        Raw {@link WlOutput.Transform} int.
+      </description>
+      <arg name="transform" type="uint" enum="wl_output.transform"/>
+    </event>
+    <enum name="error">
+      <entry name="invalid_scale" value="0"/>
+      <entry name="invalid_transform" value="1"/>
+      <entry name="invalid_size" value="2"/>
+      <entry name="invalid_offset" value="3"/>
+      <entry name="defunct_role_object" value="4"/>
+    </enum>
+  </interface>
+
+  <interface name="wl_region" version="1">
+    <description summary="region interface">
+      A rectangle set, used for surface input and opaque regions.
+    </description>
+    <request name="destroy" type="destructor"/>
+    <request name="add">
+      <arg name="x" type="int"/>
+      <arg name="y" type="int"/>
+      <arg name="width" type="int"/>
+      <arg name="height" type="int"/>
+    </request>
+    <request name="subtract">
+      <arg name="x" type="int"/>
+      <arg name="y" type="int"/>
+      <arg name="width" type="int"/>
+      <arg name="height" type="int"/>
+    </request>
+  </interface>
+
+  <interface name="wl_output" version="4">
+    <description summary="compositor output region">
+      A compositor output (monitor).
+    </description>
+    <request name="release" type="destructor" since="3"/>
+    <event name="geometry">
+      <description summary="properties of the output">
+        Raw enum ints for {@code subpixel}/{@code transform}; decode via the enum lookups.
+      </description>
+      <arg name="x" type="int"/>
+      <arg name="y" type="int"/>
+      <arg name="physical_width" type="int"/>
+      <arg name="physical_height" type="int"/>
+      <arg name="subpixel" type="int" enum="subpixel"/>
+      <arg name="make" type="string"/>
+      <arg name="model" type="string"/>
+      <arg name="transform" type="int" enum="transform"/>
+    </event>
+    <event name="mode">
+      <description summary="advertise available modes for the output">
+        {@code flags} is the bitfield decoded by {@link WlOutput.Mode#setOf(int)}.
+      </description>
+      <arg name="flags" type="uint" enum="mode"/>
+      <arg name="width" type="int"/>
+      <arg name="height" type="int"/>
+      <arg name="refresh" type="int"/>
+    </event>
+    <event name="done" since="2"/>
+    <event name="scale" since="2">
+      <arg name="factor" type="int"/>
+    </event>
+    <event name="name" since="4">
+      <arg name="name" type="string"/>
+    </event>
+    <event name="description" since="4">
+      <arg name="description" type="string"/>
+    </event>
+    <enum name="subpixel">
+      <entry name="unknown" value="0"/>
+      <entry name="none" value="1"/>
+      <entry name="horizontal_rgb" value="2"/>
+      <entry name="horizontal_bgr" value="3"/>
+      <entry name="vertical_rgb" value="4"/>
+      <entry name="vertical_bgr" value="5"/>
+    </enum>
+    <enum name="transform">
+      <description summary="transform from framebuffer to output">
+        Entry names starting with a digit in the XML are prefixed with '_' (generator rule).
+      </description>
+      <entry name="normal" value="0"/>
+      <entry name="90" value="1"/>
+      <entry name="180" value="2"/>
+      <entry name="270" value="3"/>
+      <entry name="flipped" value="4"/>
+      <entry name="flipped_90" value="5"/>
+      <entry name="flipped_180" value="6"/>
+      <entry name="flipped_270" value="7"/>
+    </enum>
+    <enum name="mode" bitfield="true">
+      <description summary="mode information">
+        Bitfield enum: decode with {@link #setOf}, encode with {@link WireEnums#mask}.
+      </description>
+      <entry name="current" value="0x1"/>
+      <entry name="preferred" value="0x2"/>
+    </enum>
+  </interface>
+
+</protocol>

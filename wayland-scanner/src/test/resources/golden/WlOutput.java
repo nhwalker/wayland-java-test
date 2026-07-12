@@ -9,6 +9,7 @@ import io.github.nhwalker.wayland.core.WaylandException;
 import io.github.nhwalker.wayland.core.WaylandGenerated;
 import io.github.nhwalker.wayland.core.WireEnum;
 import io.github.nhwalker.wayland.core.WireEnums;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Consumer;
@@ -22,14 +23,18 @@ public final class WlOutput {
           MessageDesc.of("release", 3, true)),
       List.of(
           MessageDesc.of("geometry", 1, false,
-              ArgDesc.intArg("x"), ArgDesc.intArg("y"),
-              ArgDesc.intArg("physical_width"), ArgDesc.intArg("physical_height"),
+              ArgDesc.intArg("x"),
+              ArgDesc.intArg("y"),
+              ArgDesc.intArg("physical_width"),
+              ArgDesc.intArg("physical_height"),
               ArgDesc.intArg("subpixel"),
-              ArgDesc.stringArg("make"), ArgDesc.stringArg("model"),
+              ArgDesc.stringArg("make"),
+              ArgDesc.stringArg("model"),
               ArgDesc.intArg("transform")),
           MessageDesc.of("mode", 1, false,
               ArgDesc.uintArg("flags"),
-              ArgDesc.intArg("width"), ArgDesc.intArg("height"),
+              ArgDesc.intArg("width"),
+              ArgDesc.intArg("height"),
               ArgDesc.intArg("refresh")),
           MessageDesc.of("done", 2, false),
           MessageDesc.of("scale", 2, false,
@@ -72,8 +77,8 @@ public final class WlOutput {
       Event.Name, Event.Description {
 
     /** Raw enum ints for {@code subpixel}/{@code transform}; decode via the enum lookups. */
-    record Geometry(int x, int y, int physicalWidth, int physicalHeight, int subpixel,
-        String make, String model, int transform) implements Event {}
+    record Geometry(int x, int y, int physicalWidth, int physicalHeight, int subpixel, String make,
+        String model, int transform) implements Event {}
 
     /** {@code flags} is the bitfield decoded by {@link WlOutput.Mode#setOf(int)}. */
     record Mode(int flags, int width, int height, int refresh) implements Event {}
@@ -178,7 +183,7 @@ public final class WlOutput {
       return value;
     }
 
-    public static java.util.EnumSet<Mode> setOf(int bits) {
+    public static EnumSet<Mode> setOf(int bits) {
       return WireEnums.setOf(Mode.class, bits);
     }
   }
