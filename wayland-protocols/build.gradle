@@ -1,0 +1,38 @@
+plugins {
+    id 'wayland.java-conventions'
+}
+
+description = 'Generated stubs for Wayland extension protocols (xdg-shell, ...)'
+
+configurations {
+    waylandScanner
+}
+
+dependencies {
+    api project(':wayland-core')
+    waylandScanner project(':wayland-scanner')
+}
+
+// Extension stubs are generated from the vendored protocol XML on every build; cross-protocol
+// references (wl_surface, wl_seat, wl_output) resolve to wayland-core's generated package.
+def generateProtocolStubs = tasks.register('generateProtocolStubs', JavaExec) {
+    def outputDir = layout.buildDirectory.dir('generated/sources/wayland/java')
+    def xdgShellXml = file('src/main/wayland/xdg-shell.xml')
+    classpath = configurations.waylandScanner
+    mainClass = 'io.github.nhwalker.wayland.scanner.Main'
+    javaLauncher = javaToolchains.launcherFor(java.toolchain)
+    args '--out', outputDir.get().asFile.absolutePath,
+         '--package', 'io.github.nhwalker.wayland.protocols.xdg',
+         '--import', 'io.github.nhwalker.wayland.client=builtin:wayland',
+         xdgShellXml.absolutePath
+    inputs.files(configurations.waylandScanner)
+    inputs.file(xdgShellXml)
+    outputs.dir(outputDir)
+}
+
+sourceSets.main.java.srcDir(generateProtocolStubs)
+
+tasks.named('test') {
+    // Tests exercise real fds via unix-socket's FFM implementation
+    jvmArgs '--enable-native-access=ALL-UNNAMED'
+}

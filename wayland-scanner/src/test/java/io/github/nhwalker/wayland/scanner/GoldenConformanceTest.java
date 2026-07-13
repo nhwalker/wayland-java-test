@@ -22,7 +22,7 @@ class GoldenConformanceTest {
     try (InputStream xml = Main.builtinXml("wayland")) {
       protocol = ProtocolParser.parse(xml);
     }
-    assertEquals(10, protocol.interfaces().size());
+    assertEquals(14, protocol.interfaces().size());
 
     for (Protocol.Interface iface : protocol.interfaces()) {
       String className = Names.className(iface.name());
