@@ -1,7 +1,10 @@
 package io.github.nhwalker.wayland.scanner;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.TreeSet;
 
 /**
@@ -21,19 +24,50 @@ public final class StubEmitter {
   private final String packageName;
   private final String className;
   private final boolean isDisplay;
+  private final Set<String> localInterfaces = new HashSet<>();
+  private final Map<String, String> externalInterfaces;
   private final TreeSet<String> imports = new TreeSet<>();
   private final StringBuilder body = new StringBuilder();
 
-  private StubEmitter(Protocol protocol, Protocol.Interface iface, String packageName) {
+  private StubEmitter(Protocol protocol, Protocol.Interface iface, String packageName,
+      Map<String, String> externalInterfaces) {
     this.protocol = protocol;
     this.iface = iface;
     this.packageName = packageName;
+    this.externalInterfaces = externalInterfaces;
     this.className = Names.className(iface.name());
     this.isDisplay = iface.name().equals("wl_display");
+    for (Protocol.Interface each : protocol.interfaces()) {
+      localInterfaces.add(each.name());
+    }
   }
 
   public static String emit(Protocol protocol, Protocol.Interface iface, String packageName) {
-    return new StubEmitter(protocol, iface, packageName).emitFile();
+    return emit(protocol, iface, packageName, Map.of());
+  }
+
+  /**
+   * Emits with cross-protocol references resolved through {@code externalInterfaces} — wire
+   * interface name to the package its stub was generated into (imported as needed).
+   */
+  public static String emit(Protocol protocol, Protocol.Interface iface, String packageName,
+      Map<String, String> externalInterfaces) {
+    return new StubEmitter(protocol, iface, packageName, externalInterfaces).emitFile();
+  }
+
+  /** The stub class name for a referenced interface, importing it if it lives elsewhere. */
+  private String stubClass(String wireInterfaceName) {
+    String name = Names.className(wireInterfaceName);
+    if (localInterfaces.contains(wireInterfaceName)) {
+      return name;
+    }
+    String externalPackage = externalInterfaces.get(wireInterfaceName);
+    if (externalPackage == null) {
+      throw new IllegalArgumentException(iface.name() + " references unknown interface '"
+          + wireInterfaceName + "' — pass --import for the protocol that defines it");
+    }
+    return externalPackage.equals(packageName) ? name
+        : imported(externalPackage + "." + name);
   }
 
   private String emitFile() {
@@ -152,7 +186,7 @@ public final class StubEmitter {
   private String interfaceRef(Protocol.Arg arg) {
     return arg.interfaceName() == null
         ? "null"
-        : "() -> " + Names.className(arg.interfaceName()) + ".INTERFACE";
+        : "() -> " + stubClass(arg.interfaceName()) + ".INTERFACE";
   }
 
   // ---- standard preamble ----
@@ -295,7 +329,7 @@ public final class StubEmitter {
     }
     String methodName = Names.camelName(request.name());
     if (newId != null) {
-      String childClass = Names.className(newId.interfaceName());
+      String childClass = stubClass(newId.interfaceName());
       wrap(2, "public " + childClass + " " + methodName + "(", parameters, ") {");
       List<String> callArgs = new ArrayList<>(List.of(String.valueOf(opcode),
           childClass + ".INTERFACE"));
@@ -352,8 +386,7 @@ public final class StubEmitter {
       case "string" -> "String";
       case "array" -> imported(CORE + "WlArray");
       case "fd" -> imported("io.github.nhwalker.unixsocket.Fd");
-      case "object" -> arg.interfaceName() == null ? "Proxy"
-          : Names.className(arg.interfaceName());
+      case "object" -> arg.interfaceName() == null ? "Proxy" : stubClass(arg.interfaceName());
       default -> throw new IllegalArgumentException("no parameter type for " + arg.type());
     };
   }
@@ -374,7 +407,7 @@ public final class StubEmitter {
     if (dot < 0) {
       return Names.enumClassName(enumRef);
     }
-    return Names.className(enumRef.substring(0, dot)) + "."
+    return stubClass(enumRef.substring(0, dot)) + "."
         + Names.enumClassName(enumRef.substring(dot + 1));
   }
 
@@ -529,10 +562,11 @@ public final class StubEmitter {
     return qualifiedName.substring(qualifiedName.lastIndexOf('.') + 1);
   }
 
-  private void javadoc(int indent, List<String> lines) {
-    if (lines.isEmpty()) {
+  private void javadoc(int indent, List<String> rawLines) {
+    if (rawLines.isEmpty()) {
       return;
     }
+    List<String> lines = rawLines.stream().map(StubEmitter::escapeHtml).toList();
     if (lines.size() == 1 && indent + 4 + 3 + lines.get(0).length() <= MAX_WIDTH) {
       line(indent, "/** " + lines.get(0) + " */");
       return;
@@ -542,6 +576,11 @@ public final class StubEmitter {
       line(indent, docLine.isEmpty() ? " *" : " * " + docLine);
     }
     line(indent, " */");
+  }
+
+  /** Protocol description text is plain text; escape it for javadoc's HTML context. */
+  private static String escapeHtml(String text) {
+    return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;");
   }
 
   private void line(int indent, String text) {

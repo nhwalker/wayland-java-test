@@ -1,0 +1,14 @@
+plugins {
+    id 'wayland.java-conventions'
+}
+
+description = 'Runnable examples and real-compositor integration tests'
+
+dependencies {
+    implementation project(':wayland-protocols')
+}
+
+tasks.named('test') {
+    // Talks to a real compositor through unix-socket's FFM implementation
+    jvmArgs '--enable-native-access=ALL-UNNAMED'
+}
