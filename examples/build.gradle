@@ -6,6 +6,8 @@ description = 'Runnable examples and real-compositor integration tests'
 
 dependencies {
     implementation project(':wayland-protocols')
+    // Runs the demo against Weston in a container as part of the ordinary test suite
+    testImplementation 'org.testcontainers:testcontainers:1.21.4'
 }
 
 tasks.named('test') {
