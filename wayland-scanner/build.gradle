@@ -3,3 +3,10 @@ plugins {
 }
 
 description = 'Code generator (annotation processor + CLI) for Wayland protocol XML'
+
+dependencies {
+    // Test-only: processor-generated sources import the kernel types, and the compiler-API
+    // tests need them resolvable. Main source stays dependency-free (wayland-core builds
+    // USING this module, so a main dependency would be circular in spirit).
+    testImplementation project(':wayland-core')
+}
